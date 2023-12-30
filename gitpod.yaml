@@ -1,0 +1,38 @@
+# create dockerfile for rust warp framework
+
+# Docker image to use
+image: gitpod/workspace-rust
+
+# Commands to execute when the workspace is started
+tasks:
+    command: |
+        cargo build --release
+        cargo run --release
+
+ports:
+    - port: 3030
+      onOpen: open-browser
+
+vscode:
+    extensions:
+        - rust-lang.rust
+        - ms-azuretools.vscode-docker
+        - rust-lang.rust-analyzer
+        - rust-lang.rust-src
+        - rust-lang.rust-analyzer-preview
+        - rust-lang.rust-preview
+        - rust-lang.rust-analyzer-preview
+        - rust-lang.rust-analyzer-preview
+        - rust-lang.rust-analyzer-preview
+        - rust-lang.rust-analyzer-preview
+        - rust-lang.rust-analyzer-preview
+        - rust-lang.rust-analyzer-preview
+        - rust-lang.rust-analyzer-preview
+        - rust-lang.rust-analyzer-preview
+        - rust-lang.rust-analyzer-preview
+        - rust-lang.rust-analyzer-preview
+        - rust-lang.rust-analyzer-preview
+        - rust-lang.rust-analyzer-preview
+        - rust-lang.rust-analyzer-preview
+        - rust-lang.rust-analyzer-preview
+        -
