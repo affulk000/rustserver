@@ -10,8 +10,8 @@ mod auth;
 mod error;
 
 type WebResult<T, E = Rejection> = std::result::Result<T, E>;
-type UserMap = Arc<HashMap<String, User>>;
-type Result<T, Err = Error> = std::result::Result<T, Err>;
+type Users = Arc<HashMap<String, User>>;
+type Result<T, Err = error::Error> = std::result::Result<T, Err>;
 
 #[derive(Clone)]
 pub struct User {
@@ -34,9 +34,9 @@ pub struct LoginResponse {
 
 #[tokio::main]
 async fn main() {
-    let users = Arc::new(init_users());
+    let users = init_users();
 
-    let login = warp::path!("login")
+    let login_route = warp::path!("login")
         .and(warp::post())
         .and(with_users(users.clone()))
         .and(warp::body::json())
@@ -50,7 +50,7 @@ async fn main() {
         .and(with_auth(Role::Admin))
         .and_then(admin_handler);
 
-    let routes = login
+    let routes = login_route
         .or(user_route)
         .or(admin_route)
         .recover(error::handle_rejection);
@@ -58,19 +58,25 @@ async fn main() {
     warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
 }
 
-fn with_users(users: UserMap) -> impl Filter<Extract = (UserMap,), Error = Infallible> + Clone {
+fn with_users(users: Users) -> impl Filter<Extract = (Users,), Error = Infallible> + Clone {
     warp::any().map(move || users.clone())
 }
 
+
 pub async fn login_handler(
-    users: UserMap,
+    users: Users,
     request: LoginRequest,
 ) -> WebResult<impl Reply, Rejection> {
-    match users.iter().find(|(_uid,user)| user.email == request.email && user.password == request.password) {
-        Some((_uid, user)) => Ok(reply::json(&LoginResponse {
-            token: user.uid.clone(),
-        })),
-        None => Err(reject::custom(InvalidCredentials)),
+    match users.get(&request.email) {
+        Some(user) => {
+
+            // create a JWT token with the encoding key and the user's role
+            let token = auth::create_jwt(&user.uid, &Role::User).expect("Failed to create JWT");
+
+            // Return the token as a JSON response (e.g. {"token": "your_token"}
+            Ok(reply::json(&LoginResponse { token }))
+        }
+        _ => Err(reject::custom(InvalidCredentials)),
     }
 }
 
@@ -81,17 +87,17 @@ pub async fn admin_handler(uid: String) -> WebResult<impl Reply, Rejection> {
     Ok(reply::json(&uid))
 }
 
-fn init_users() -> UserMap {
+fn init_users() -> Users {
     let mut users = HashMap::new();
     let user = User {
-        uid: "1".to_string(),
+        uid: String::from("1"),
         email: "user@example.com".to_string(),
         password: "XXXXXXXX".to_string(),
         role: "user".to_string(),
     };
     users.insert(user.email.clone(), user);
     let admin = User {
-        uid: "2".to_string(),
+        uid: String::from("2"),
         email: "admin@example.com".to_string(),
         password: "XXXXXXXX".to_string(),
         role: "admin".to_string(),
